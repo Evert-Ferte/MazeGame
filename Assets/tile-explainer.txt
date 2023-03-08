@@ -1,0 +1,24 @@
+dead end
+- 100  entrance top        ^       0000 1000   8
+- 101  entrance right      >       0000 0100   4
+- 102  entrance bottom     T       0000 0010   2
+- 103  entrance left       <       0000 0001   1
+
+straight
+- 200  horizontal          ═       0000 0101   5
+- 201  vertical            ║       0000 1010   10
+
+corner
+- 300  top-right           ╚       0000 1100   12
+- 301  right-bottom        ╔       0000 0110   6
+- 302  bottom-left         ╗       0000 0011   3
+- 303  left-top            ╝       0000 1001   9
+
+t split
+- 400  left-top-right      ╩       0000 1101   13
+- 401  top-right-bottom    ╠       0000 1110   14
+- 402  right-bottom-left   ╦       0000 0111   7
+- 403  bottom-left-top     ╣       0000 1011   11
+
+crossroad
+- 500                      ╬       0000 1111   15

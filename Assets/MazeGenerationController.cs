@@ -1,107 +1,148 @@
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
+// Art style:
+// - simplistic
+// - hand drawn
 public class MazeGenerationController : MonoBehaviour {
-    public int size = 25;
+    public Vector2Int size = new (25, 25);
+    [Space]
+    
+    public Transform deadEndTop;
+    public Transform deadEndRight;
+    public Transform deadEndBottom;
+    public Transform deadEndLeft;
+    [Space] public Transform straightHorizontal;
+    public Transform straightVertical;
+    [Space] public Transform cornerTopRight;
+    public Transform cornerRightBottom;
+    public Transform cornerBottomLeft;
+    public Transform cornerLeftTop;
+    [Space] public Transform tSplitLeftTopRight;
+    public Transform tSplitTopRightBottom;
+    public Transform tSplitRightBottomLeft;
+    public Transform tSplitBottomLeftTop;
+    [Space] public Transform crossroad;
 
+    private int[,] maze;
+    private Vector2Int entrance = new (1, 0);
+    private Vector2Int exit;
+    
     private void Start() {
         CreateMaze();
     }
 
     private void CreateMaze() {
-        float[,] maze = new float[size, size];
-
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                if (i % 2 == 1 || j % 2 == 1)
-                    maze[i, j] = 0;
-                if (i == 0 || j == 0 || i == size - 1 || j == size - 1)
-                    maze[i, j] = 0.5f;
-            }
-        }
-
-        int startPosX = Random.Range(2, size - 2);
-        int startPosY = Random.Range(2, size - 2);
+        maze = new int[size.y, size.x];
+        exit = new(size.x - 2, size.y - 1);
+        
+        int startPosX = Random.Range(2, size.x - 2);
+        int startPosY = Random.Range(2, size.y - 2);
         
         Generator(startPosX, startPosY, maze);
 
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                if (maze[i, j] == 0.5f)
-                    maze[i, j] = 1;
-            }
-        }
-
-        // TODO dit is denk ik om de start en finish te zetten
-        maze[1, 2] = 1;
-        maze[size - 2, size - 3] = 1;
-
-        DrawMaze(maze);
-    }
-
-    private void Generator(int startX, int startY, float[,] maze) {
-        maze[startY, startX] = 0.5f;
+        // Place the start and finish
+        // TODO maybe pick a random start, and make the end the opposite of this
+        maze[entrance.y, entrance.x] |= 0b1000;
+        maze[exit.y, exit.x] |= 0b0010;
         
-        // if (maze[startY - 2, startX] == 0.5f && maze[startY + 2, startX] )
-        if (maze[startY - 2, startX] == 0.5 &&
-            maze[startY + 2, startX] == 0.5 &&
-            maze[startY, startX - 2] == 0.5 &&
-            maze[startY, startX + 2] == 0.5) {
+        DrawMaze(maze);
+        
+        // Resize the camera so it fully shows the maze
+        FindObjectOfType<CameraController>().ResizeCameraToShowContent(size.x);
+    }
+
+    private void Generator(int cX, int cY, int[,] maze) {
+        bool valid = false;
+
+        if (cY != 0)
+            if (maze[cY - 1, cX] == 0)
+                valid = true;
+        if (cY != size.y - 1)
+            if (maze[cY + 1, cX] == 0)
+                valid = true;
+        if (cX != 0)
+            if (maze[cY, cX - 1] == 0)
+                valid = true;
+        if (cX != size.x - 1)
+            if (maze[cY, cX + 1] == 0)
+                valid = true;
+
+        if (!valid) return;
+        
+        List<int> li = new() {0, 1, 2, 3};  // 0 = up, 1 = right, 2 = down, 3 = left
+        if (cX == 0) li.Remove(3);
+        else if (cX == size.x - 1) li.Remove(1);
+        if (cY == 0) li.Remove(0);
+        else if (cY == size.y - 1) li.Remove(2);
             
-        }
-        else {
-            List<int> li = new() {0, 1, 2, 3};  // 0 = up, 1 = down, 2 = left, 3 = right
+        int[] dirs = { 0b1000, 0b0100, 0b0010, 0b0001 };
 
-            int nY = 0;
-            int mY = 0;
-            int nX = 0;
-            int mX = 0;
+        while (li.Count > 0) {
+            int nY, nX;
+            int dir = li[Random.Range(0, li.Count)];
+            li.Remove(dir);
 
-            while (li.Count > 0) {
-                int direction = li[Random.Range(0, li.Count)];
-                li.Remove(direction);
-                
-                if (direction == 0) {
-                    nY = startY - 2;
-                    mY = startY - 1;
-                }
-                else if (direction == 1) {
-                    nY = startY + 2;
-                    mY = startY + 1;
-                }
-                else {
-                    nY = startY;
-                    mY = startY;
-                }
-                
-                if (direction == 2) {
-                    nX = startX - 2;
-                    mX = startX - 1;
-                }
-                else if (direction == 3) {
-                    nX = startX + 2;
-                    mX = startX + 1;
-                }
-                else {
-                    nX = startX;
-                    mX = startX;
-                }
+            if (dir == 0) nY = cY - 1;
+            else if (dir == 2) nY = cY + 1;
+            else nY = cY;
 
-                if (maze[nY, nX] != 0.5f) {
-                    maze[mY, mX] = 0.5f;
-                    Generator(nX, nY, maze);
-                }
+            if (dir == 3) nX = cX - 1;
+            else if (dir == 1) nX = cX + 1;
+            else nX = cX;
+
+            if (maze[nY, nX] == 0) {
+                maze[cY, cX] |= dirs[dir];
+                maze[nY, nX] |= dirs[dir + (dir < 2 ? 2 : -2)];
+                Generator(nX, nY, maze);
             }
         }
     }
 
-    private void DrawMaze(float[,] maze) {
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                Debug.Log(maze[i, j]);
+    private void DrawMaze(int[,] maze) {
+        for (int i = 0; i < maze.GetLength(0); i++) {
+            for (int j = 0; j < maze.GetLength(1); j++) {
+                Transform objToSpawn;
+            
+                // Dead ends
+                if (maze[i, j] == 8) objToSpawn = deadEndTop;
+                else if (maze[i, j] == 4) objToSpawn = deadEndRight;
+                else if (maze[i, j] == 2) objToSpawn = deadEndBottom;
+                else if (maze[i, j] == 1) objToSpawn = deadEndLeft;
+                // Straights
+                else if (maze[i, j] == 10) objToSpawn = straightVertical;
+                else if (maze[i, j] == 5) objToSpawn = straightHorizontal;
+                // Corners
+                else if (maze[i, j] == 12) objToSpawn = cornerTopRight;
+                else if (maze[i, j] == 6) objToSpawn = cornerRightBottom;
+                else if (maze[i, j] == 3) objToSpawn = cornerBottomLeft;
+                else if (maze[i, j] == 9) objToSpawn = cornerLeftTop;
+                // T-splits
+                else if (maze[i, j] == 13) objToSpawn = tSplitLeftTopRight;
+                else if (maze[i, j] == 14) objToSpawn = tSplitTopRightBottom;
+                else if (maze[i, j] == 7) objToSpawn = tSplitRightBottomLeft;
+                else if (maze[i, j] == 11) objToSpawn = tSplitBottomLeftTop;
+                // Crossroad
+                else objToSpawn = crossroad;
+
+                Vector2 pos = MazeToWorldPosition(j, i);
+                Instantiate(objToSpawn, pos, Quaternion.identity, this.transform);
             }
         }
     }
+
+    private Vector2 MazeToWorldPosition(float x, float y) {
+        return new (x - size.x / 2f + (size.x % 2 == 0 ? 0.5f : 0), (y - size.y / 2f) * -1);
+    }
+
+    public Vector2Int WorldToMazePosition(float x, float y) {
+        return new((int)(x + size.x / 2f), (int)(size.y - (y + size.y / 2f)));
+    }
+
+    public int[,] GetMaze() { return maze; }
+    public Vector2Int GetEntranceMazePosition() { return entrance; }
+    public Vector2 GetEntranceWorldPosition() { return MazeToWorldPosition(entrance.x, entrance.y); }
+    public Vector2Int GetExitMazePosition() { return exit; }
+    public Vector2 GetExitWorldPosition() { return MazeToWorldPosition(exit.x, exit.y); }
 }
